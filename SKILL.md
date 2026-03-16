@@ -37,12 +37,40 @@ metadata:
 
 ### 自动备份触发条件
 
+#### 场景 1：用户要求修改配置
+
 当用户说以下话时，AI 会自动触发备份：
 - "修改 xxx 配置"
 - "改一下 xxx 文件"
 - "更新 xxx 配置"
 - "编辑 xxx"
 - 任何包含「修改/编辑/更新/改」+「配置文件路径」的意图
+
+#### 场景 2：AI 自主决定修改配置
+
+当 AI 自己判断需要修改配置文件时，**也必须先自动备份**：
+- 优化配置参数
+- 修复配置错误
+- 添加新功能配置
+- 调整系统设置
+
+**AI 自主修改流程**：
+```
+AI: 检测到需要修改 /root/.openclaw/openclaw.json
+    ↓
+AI: 自动备份（无需用户指令）
+    config-backup backup /root/.openclaw/openclaw.json -m "AI 自主修改前备份"
+    ↓
+AI: 执行修改
+    编辑 /root/.openclaw/openclaw.json
+    ↓
+AI: 提示用户
+    "🤖 我已自动备份并修改了 openclaw.json
+     改动：xxx → yyy
+     如果出问题，请说'恢复刚才的备份'"
+```
+
+**关键原则**：无论谁发起的修改（用户或 AI），**都必须先备份**。
 
 ### 自动备份流程
 
@@ -160,7 +188,28 @@ config-backup restore latest
 # "✅ 已恢复，建议重启：openclaw gateway restart"
 ```
 
-### 示例 3：手动备份（传统方式）
+### 示例 3：AI 自主修改配置（自动备份）
+
+**场景**：AI 检测到 exec 权限有问题，需要修改配置
+
+**AI 自主执行**：
+```bash
+# 1. AI 判断需要修改 openclaw.json
+# 2. AI 自动备份（无需用户说"备份"）
+config-backup backup /root/.openclaw/openclaw.json -m "AI 自主修改：开启 exec 权限"
+
+# 3. AI 执行修改
+# 编辑 /root/.openclaw/openclaw.json
+# 添加："exec": { "approvals": false }
+
+# 4. AI 提示用户
+# "🤖 我已自动备份并修改了 openclaw.json
+#  改动：添加了 exec 权限配置
+#  版本号：20260316-143022
+#  如果出问题，请说'恢复刚才的备份'"
+```
+
+### 示例 4：手动备份（传统方式）
 
 **用户输入**：先备份一下 openclaw.json
 
