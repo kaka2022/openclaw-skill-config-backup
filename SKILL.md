@@ -28,15 +28,16 @@ metadata:
 ### 1. 初始化备份仓库
 
 ```bash
-# 创建 GitHub 私有仓库（已自动完成）
-# 模板仓库: https://github.com/openclaw-community/config-backup-template
-# 建议 Fork 后使用自己的仓库
+# 运行配置向导（推荐）
+config-backup setup
 
-# 克隆到本地
-# 1. Fork 模板仓库到自己的 GitHub
-# 2. 克隆自己的仓库
-git clone https://github.com/YOUR_USERNAME/config-backup.git ~/.config-backup
-cd ~/.config-backup
+# 或者手动配置
+mkdir -p ~/.config-backup
+cat > ~/.config-backup/config << 'EOF'
+GITHUB_TOKEN="ghp_xxxxxxxxxxxx"
+BACKUP_REPO_URL="https://github.com/YOUR_USERNAME/config-backup"
+EOF
+chmod 600 ~/.config-backup/config
 ```
 
 ### 2. 备份配置
