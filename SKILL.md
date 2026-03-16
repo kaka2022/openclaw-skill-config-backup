@@ -31,46 +31,120 @@ metadata:
 - 用户想查看配置历史版本
 - 用户想清理旧备份
 
-## 🎯 核心特性：自动备份
+## 🎯 核心特性：三种备份模式
 
-**本 Skill 的核心设计是「自动备份」**——当 AI 检测到用户要修改配置文件时，**自动先备份，再修改**。
+本 Skill 支持**三种备份模式**，覆盖所有场景：
 
-### 自动备份触发条件
+### 模式 1：人工指令模式（传统）
 
-#### 场景 1：用户要求修改配置
+**触发条件**：用户明确说"备份"或"恢复"
 
-当用户说以下话时，AI 会自动触发备份：
-- "修改 xxx 配置"
-- "改一下 xxx 文件"
-- "更新 xxx 配置"
-- "编辑 xxx"
-- 任何包含「修改/编辑/更新/改」+「配置文件路径」的意图
+```bash
+# 用户说：备份一下
+config-backup backup /path/to/config
 
-#### 场景 2：AI 自主决定修改配置
-
-当 AI 自己判断需要修改配置文件时，**也必须先自动备份**：
-- 优化配置参数
-- 修复配置错误
-- 添加新功能配置
-- 调整系统设置
-
-**AI 自主修改流程**：
+# 用户说：恢复刚才的备份
+config-backup restore latest
 ```
-AI: 检测到需要修改 /root/.openclaw/openclaw.json
+
+**适用场景**：用户主动管理备份
+
+---
+
+### 模式 2：AI 自动模式（核心）
+
+**触发条件**：检测到修改配置意图时，**自动先备份**
+
+#### 场景 2.1：用户要求修改
+
+```
+用户: "修改 openclaw.json，添加 exec 权限"
     ↓
-AI: 自动备份（无需用户指令）
-    config-backup backup /root/.openclaw/openclaw.json -m "AI 自主修改前备份"
+AI: 🤖 自动识别意图
+    ↓
+AI: 自动备份
+    config-backup backup /root/.openclaw/openclaw.json -m "用户要求修改前自动备份"
     ↓
 AI: 执行修改
-    编辑 /root/.openclaw/openclaw.json
     ↓
 AI: 提示用户
-    "🤖 我已自动备份并修改了 openclaw.json
-     改动：xxx → yyy
+    "✅ 已自动备份（版本 20260316-143022），配置已修改"
+```
+
+#### 场景 2.2：AI 自主修改
+
+```
+AI: 检测到配置问题，需要修复
+    ↓
+AI: 🤖 自动备份（无需用户指令）
+    config-backup backup /root/.openclaw/openclaw.json -m "AI 自主修复前备份"
+    ↓
+AI: 执行修复
+    ↓
+AI: 提示用户
+    "🤖 我已自动备份并修复了配置
+     问题：xxx
+     修复：yyy
      如果出问题，请说'恢复刚才的备份'"
 ```
 
 **关键原则**：无论谁发起的修改（用户或 AI），**都必须先备份**。
+
+---
+
+### 模式 3：网关重启前自动备份（系统级）
+
+**触发条件**：OpenClaw Gateway 重启前，**自动备份核心配置**
+
+**安装方式**：
+```bash
+# 1. 复制钩子脚本
+sudo cp scripts/gateway-backup-hook.sh /usr/local/bin/
+sudo chmod +x /usr/local/bin/gateway-backup-hook.sh
+
+# 2. 添加到 systemd 服务（在 ExecStop 前执行）
+sudo systemctl edit openclaw-gateway
+
+# 添加：
+[Service]
+ExecStopPre=/usr/local/bin/gateway-backup-hook.sh
+```
+
+**触发流程**：
+```
+用户/系统: 重启 Gateway
+    ↓
+systemd: 执行 ExecStopPre
+    ↓
+gateway-backup-hook.sh: 自动备份核心配置
+    - openclaw.json
+    - exec-approvals.json
+    - systemd 服务配置
+    ↓
+Gateway: 正常重启
+    ↓
+如果重启失败: 可以恢复到重启前的配置
+```
+
+**适用场景**：
+- 系统更新前自动备份
+- 配置变更后重启前备份
+- 防止重启后配置丢失
+
+---
+
+## 三种模式对比
+
+| 模式 | 触发方式 | 用户感知 | 适用场景 |
+|------|----------|----------|----------|
+| **模式 1** | 用户说"备份/恢复" | 主动 | 用户明确要管理备份 |
+| **模式 2** | AI 检测到修改意图 | 自动 | 日常配置修改，AI 自动保护 |
+| **模式 3** | Gateway 重启前 | 无感知 | 系统级保护，防止重启丢失 |
+
+**推荐组合**：
+- 日常使用：**模式 2**（AI 自动）
+- 系统维护：**模式 3**（重启前自动）
+- 特殊需求：**模式 1**（手动控制）
 
 ### 自动备份流程
 
