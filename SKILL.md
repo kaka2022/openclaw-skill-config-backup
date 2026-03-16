@@ -31,6 +31,61 @@ metadata:
 - 用户想查看配置历史版本
 - 用户想清理旧备份
 
+## 🎯 核心特性：自动备份
+
+**本 Skill 的核心设计是「自动备份」**——当 AI 检测到用户要修改配置文件时，**自动先备份，再修改**。
+
+### 自动备份触发条件
+
+当用户说以下话时，AI 会自动触发备份：
+- "修改 xxx 配置"
+- "改一下 xxx 文件"
+- "更新 xxx 配置"
+- "编辑 xxx"
+- 任何包含「修改/编辑/更新/改」+「配置文件路径」的意图
+
+### 自动备份流程
+
+```
+用户: "修改 openclaw.json，添加 exec 权限"
+    ↓
+AI: 识别到配置文件路径 /root/.openclaw/openclaw.json
+    ↓
+AI: 自动执行备份
+    config-backup backup /root/.openclaw/openclaw.json -m "修改前自动备份"
+    ↓
+AI: 执行修改
+    编辑 /root/.openclaw/openclaw.json
+    ↓
+AI: 提示用户
+    "✅ 已自动备份，版本号 20260316-143022
+     配置已修改，如果出问题请说'恢复刚才的备份'"
+```
+
+### 自动恢复触发条件
+
+当用户说以下话时，AI 会自动触发恢复：
+- "恢复刚才的备份"
+- "出问题了，回滚"
+- "撤销修改"
+- "还原配置"
+- "配置改坏了"
+
+### 自动恢复流程
+
+```
+用户: "出问题了，恢复刚才的备份"
+    ↓
+AI: 识别到恢复意图
+    ↓
+AI: 自动执行恢复
+    config-backup restore latest
+    ↓
+AI: 提示用户
+    "✅ 已恢复到版本 20260316-143022
+     建议重启相关服务：openclaw gateway restart"
+```
+
 ## 安全声明
 
 ⚠️ **权限范围**（已明确声明）：
@@ -74,16 +129,44 @@ chmod 600 ~/.config-backup/config
 
 ## 使用示例
 
-### 示例 1：修改配置前备份
+### 示例 1：自动备份（推荐）
 
-**用户输入**：我要修改 OpenClaw 配置，先帮我备份
+**用户输入**：修改 openclaw.json，把 exec 权限打开
+
+**AI 自动执行**：
+```bash
+# 1. 自动识别配置文件路径
+# 2. 自动备份（无需用户说"备份"）
+config-backup backup /root/.openclaw/openclaw.json -m "修改前自动备份"
+
+# 3. 执行修改
+# 编辑 /root/.openclaw/openclaw.json
+
+# 4. 提示用户
+# "✅ 已自动备份（版本 20260316-143022），配置已修改"
+```
+
+### 示例 2：自动恢复
+
+**用户输入**：出问题了，恢复刚才的备份
+
+**AI 自动执行**：
+```bash
+# 1. 自动识别恢复意图
+# 2. 自动恢复到最新版本
+config-backup restore latest
+
+# 3. 提示重启服务
+# "✅ 已恢复，建议重启：openclaw gateway restart"
+```
+
+### 示例 3：手动备份（传统方式）
+
+**用户输入**：先备份一下 openclaw.json
 
 **执行步骤**：
 ```bash
-config-backup backup /root/.openclaw/openclaw.json -m "准备修改 exec 权限"
-# 用户修改配置...
-# 如果出问题，立即恢复
-config-backup restore latest
+config-backup backup /root/.openclaw/openclaw.json -m "用户手动备份"
 ```
 
 ### 示例 2：批量备份所有配置
